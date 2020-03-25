@@ -102,7 +102,7 @@
 
     var cmap = chroma.scale([chroma.hsv(0, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(270, 1, 1)]).mode("hsv").domain([10, 1]);
 
-    $.getJSON("cases.json", function(data) {
+    $.getJSON("https://nzcovid19api.xerra.nz/cases/json", function(data) {
         console.log(data)
         locationSummary = {}
         for (var i in data) {
