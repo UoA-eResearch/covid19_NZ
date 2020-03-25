@@ -109,6 +109,7 @@
             var c = data[i];
             if (c.LocationName == 'Waitemata') c.LocationName = "Auckland";
             if (c.LocationName == 'Southern DHB') c.LocationName = "Dunedin";
+            c.LocationName = c.LocationName.replace(" Region", "")
             if (!locationSummary[c.LocationName]) {
                 locationSummary[c.LocationName] = {
                     latlong: c.LocationCentrePoint.coordinates.reverse(),
