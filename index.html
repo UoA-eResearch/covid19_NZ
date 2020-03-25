@@ -18,6 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.23.0/moment.min.js"></script>
     <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.3/chroma.min.js"></script>
+    <script src="https://unpkg.com/papaparse"></script>
     <style>
         body, html, #map {
             width: 100%;
@@ -102,34 +103,40 @@
 
     var cmap = chroma.scale([chroma.hsv(0, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(270, 1, 1)]).mode("hsv").domain([10, 1]);
 
-    $.getJSON("https://nzcovid19api.xerra.nz/cases/json", function(data) {
-        console.log(data)
-        locationSummary = {}
-        for (var i in data) {
-            var c = data[i];
-            if (c.LocationName == 'Waitemata') c.LocationName = "Auckland";
-            if (c.LocationName == 'Southern DHB') c.LocationName = "Dunedin";
-            c.LocationName = c.LocationName.replace(" Region", "")
-            if (!locationSummary[c.LocationName]) {
-                locationSummary[c.LocationName] = {
-                    latlong: c.LocationCentrePoint.coordinates.reverse(),
-                    name: c.LocationName,
-                    count: 1
+    Papa.parse("cases.csv", {
+        download: true,
+        dynamicTyping: true,
+        header: true,
+        complete: function(data) {
+            console.log(data)
+            window.data = data.data;
+            locationSummary = {}
+            for (var i in data.data) {
+                var c = data.data[i];
+                if (c.LocationName == 'Waitemata') c.LocationName = "Auckland";
+                if (c.LocationName == 'Southern DHB') c.LocationName = "Dunedin";
+                c.LocationName = c.LocationName.replace(" Region", "")
+                if (!locationSummary[c.LocationName]) {
+                    locationSummary[c.LocationName] = {
+                        latlong: [c.LocationCentrePointLatitude, c.LocationCentrePointLongitude],
+                        name: c.LocationName,
+                        count: 1
+                    }
+                } else {
+                    locationSummary[c.LocationName].count++;
                 }
-            } else {
-                locationSummary[c.LocationName].count++;
             }
-        }
-        for (var i in locationSummary) {
-            var l = locationSummary[i]
-            var radius = l.count;
-            if (radius < 10) radius = 10;
-            var marker = L.circleMarker(l.latlong, { radius: radius, color: cmap(l.count) }).bindTooltip(l.name).addTo(map);
-            var text = L.tooltip({
-                permanent: true,
-                direction: 'center',
-                className: 'text'
-            }).setContent("" + l.count).setLatLng(l.latlong).addTo(regionCounts);
+            for (var i in locationSummary) {
+                var l = locationSummary[i]
+                var radius = l.count;
+                if (radius < 10) radius = 10;
+                var marker = L.circleMarker(l.latlong, { radius: radius, color: cmap(l.count) }).bindTooltip(l.name).addTo(map);
+                var text = L.tooltip({
+                    permanent: true,
+                    direction: 'center',
+                    className: 'text'
+                }).setContent("" + l.count).setLatLng(l.latlong).addTo(regionCounts);
+            }
         }
     });
 
