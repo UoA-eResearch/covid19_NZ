@@ -91,8 +91,7 @@
     <div id="plots">
         <div id="timeline" class="plot" style="width: 100%"></div>
         <button type="button" class="btn" id="play"><i class="fas fa-play"></i></button>
-        <div id="gender" class="plot" style="width: 50%"></div>
-        <div id="age" class="plot" style="width: 50%;float: right"></div>
+        <div id="gender_age" class="plot" style="width: 100%"></div>
     </div>
 </div>
 <script>
@@ -177,10 +176,8 @@
             var cases = 0;
             for (var j in region.data) {
                 var c = region.data[j];
-                if (filterSpec.gender) {
-                    if (c.Gender == filterSpec.gender) cases++;
-                } else if (filterSpec.age) {
-                    if (c.Age == filterSpec.age) cases++;
+                if (filterSpec.gender_age) {
+                    if (c.Age == filterSpec.gender_age) cases++;
                 } else if (filterSpec.timeline) {
                     if (moment(c.Date) <= moment(filterSpec.timeline)) cases++;
                 } else {
@@ -228,6 +225,8 @@
                     "80s": 0,
                     "Unknown": 0
                 }
+                ageSummaryM = $.extend({}, ageSummary);
+                ageSummaryF = $.extend({}, ageSummary)
                 for (var i in data) {
                     var region = data[i];
                     var name = region.Region;
@@ -248,6 +247,11 @@
                         if (c.Age == 64) c.Age = "60s";
                         if (!c.Age) c.Age = "Unknown";
                         ageSummary[c.Age]++;
+                        if (c.Gender == "Female") {
+                            ageSummaryF[c.Age]++;
+                        } else if (c.Gender == "Male") {
+                            ageSummaryM[c.Age]++;
+                        }
                         if (!casesPerDay[c.Date]) casesPerDay[c.Date] = 0;
                         casesPerDay[c.Date]++;
                     }
@@ -335,26 +339,23 @@
                 Plotly.newPlot("timeline", data, layout, {responsive: true});
 
                 var data = [{
-                    values: Object.values(genderSummary),
-                    labels: Object.keys(genderSummary),
-                    type: 'pie'
-                }];
-
-                var layout = {
-                    title: "Gender distribution"
-                };
-
-                Plotly.newPlot('gender', data, layout, {responsive: true});
-
-                var data = [{
-                    x: Object.keys(ageSummary),
-                    y: Object.values(ageSummary),
+                    name: "Male",
+                    x: Object.keys(ageSummaryM),
+                    y: Object.values(ageSummaryM),
                     type: 'bar'
-                }];
+                },
+                {
+                    name: "Female",
+                    x: Object.keys(ageSummaryF),
+                    y: Object.values(ageSummaryF),
+                    type: 'bar'
+                },
+            ];
                 var layout = {
-                    title: "Age distribution",
+                    title: "Gender/Age distribution",
+                    barmode: 'stack'
                 }
-                Plotly.newPlot('age', data, layout, {responsive: true});
+                Plotly.newPlot('gender_age', data, layout, {responsive: true});
 
 
                 $(".plot").on('plotly_hover', function(event, data){
