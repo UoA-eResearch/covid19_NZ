@@ -19,7 +19,7 @@
     <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.3/chroma.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://unpkg.com/resizerjs"></script>
+    <script src="https://eknowles.github.io/resizerjs/resizer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.min.js"></script>
     <style>
         body, html {
@@ -184,7 +184,7 @@
                     cases++;
                 }
             }
-            var radius = Math.sqrt(cases / Math.PI) * 10;
+            var radius = Math.floor(cases / 6.2) * 5;
             if (radius < 10) radius = 10;
             if (cases == 0) {
                 region.marker.removeFrom(map);
@@ -193,7 +193,7 @@
                 region.marker.addTo(map);
                 region.markerText.addTo(regionCounts);
             }
-            region.marker.setRadius(radius).setStyle({color: cmap(cases)});
+            region.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
             region.markerText.setContent("" + cases);
         }
     }
@@ -255,9 +255,10 @@
                         if (!casesPerDay[c.Date]) casesPerDay[c.Date] = 0;
                         casesPerDay[c.Date]++;
                     }
-                    var radius = Math.sqrt(cases / Math.PI) * 10;
+                    var radius = Math.floor(cases / 6.2) * 5;
                     if (radius < 10) radius = 10;
-                    var marker = L.circleMarker(locations[name], { radius: radius, color: cmap(cases), name: name }).bindTooltip(name).addTo(map);
+                    var color = "blue"; //cmap(cases)
+                    var marker = L.circleMarker(locations[name], { radius: radius, color: color, name: name }).bindTooltip(name).addTo(map);
                     var text = L.tooltip({
                         permanent: true,
                         direction: 'center',
