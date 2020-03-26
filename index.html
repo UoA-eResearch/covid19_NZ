@@ -184,7 +184,7 @@
                     cases++;
                 }
             }
-            var radius = cases;
+            var radius = Math.sqrt(cases / Math.PI) * 10;
             if (radius < 10) radius = 10;
             if (cases == 0) {
                 region.marker.removeFrom(map);
@@ -255,7 +255,7 @@
                         if (!casesPerDay[c.Date]) casesPerDay[c.Date] = 0;
                         casesPerDay[c.Date]++;
                     }
-                    var radius = cases;
+                    var radius = Math.sqrt(cases / Math.PI) * 10;
                     if (radius < 10) radius = 10;
                     var marker = L.circleMarker(locations[name], { radius: radius, color: cmap(cases), name: name }).bindTooltip(name).addTo(map);
                     var text = L.tooltip({
