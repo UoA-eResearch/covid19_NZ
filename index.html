@@ -143,7 +143,7 @@
                 } else if (filterSpec.age) {
                     if (c.Age == filterSpec.age) cases++;
                 } else if (filterSpec.timeline) {
-                    if (c.Date < filterSpec.timeline) cases++;
+                    if (c.Date <= filterSpec.timeline) cases++;
                 } else {
                     cases++;
                 }
@@ -243,7 +243,8 @@
             },
             yaxis: {
                 title: "Cases",
-            }
+            },
+            hoverdistance: 100
         };
         Plotly.newPlot("timeline", data, layout, {responsive: true});
 
