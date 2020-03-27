@@ -195,7 +195,9 @@
                     if (moment(c.Date) > moment(filterSpec.timeline)) {
                         match = false;
                     }
-                } 
+                } else if (filterSpec.DHB_id) {
+                    if (c.DHB_id != filterSpec.DHB_id) match = false;
+                }
                 
                 if (match) {
                     cases++;
@@ -253,6 +255,7 @@
             var name = c.DHB;
             if (!name) continue;
             var DHB_id = name.replace("South ", "").slice(0,4).toLowerCase();
+            c.DHB_id = DHB_id;
             if (!locationSummary[DHB_id]) locationSummary[DHB_id] = {count: 0, name: name, casesAtLocation: []};
             locationSummary[DHB_id].count++;
             locationSummary[DHB_id].casesAtLocation.push(c);
@@ -278,14 +281,14 @@
             var radius = Math.floor(cases / 6.2) * 5;
             if (radius < 10) radius = 10;
             var color = "pink"; //cmap(cases)
-            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillOpacity:1, name: name }).addTo(map);
+            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillOpacity:1, name: name, DHB_id: DHB_id }).bindTooltip(name).addTo(map);
             var text = L.tooltip({
                 permanent: true,
                 direction: 'center',
                 className: 'text'
             }).setContent("" + cases).setLatLng(latlong).addTo(regionCounts);
             marker.on('mouseover',function(event) {
-                filter({"name": event.target.options.name})
+                filter({"DHB_id": event.target.options.DHB_id})
             }).on("mouseout", function() {
                 filter({})
             });
@@ -397,8 +400,16 @@
         window.DHB = {}
         L.geoJSON(DHB, {
             onEachFeature: function(feature, layer) {
-                window.DHB[feature.properties.NAME.replace("South ", "").slice(0,4).toLowerCase()] = layer.getBounds().getCenter();
+                var DHB_id = feature.properties.NAME.replace("South ", "").slice(0,4).toLowerCase();
+                window.DHB[DHB_id] = layer.getBounds().getCenter();
+                layer.options.DHB_id = DHB_id;
                 layer.bindTooltip(feature.properties.NAME)
+                
+                layer.on('mouseover',function(event) {
+                    filter({"DHB_id": event.target.options.DHB_id})
+                }).on("mouseout", function() {
+                    filter({})
+                });
             }
         }).addTo(DHB_layer);
         Papa.parse("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.csv", {
