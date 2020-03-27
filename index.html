@@ -170,16 +170,40 @@
 
     function filter(filterSpec) {
         console.log(filterSpec);
+        ageSummary = {
+            "Child": 0,
+            "Teens": 0,
+            "20s": 0,
+            "30s": 0,
+            "40s": 0,
+            "50s": 0,
+            "60s": 0,
+            "70s": 0,
+            "80s": 0,
+            "Unknown": 0
+        }
+        ageSummaryM = $.extend({}, ageSummary);
+        ageSummaryF = $.extend({}, ageSummary);
         for (var DHB_id in locationSummary) {
             var cases = 0;
             for (var i in locationSummary[DHB_id].casesAtLocation) {
                 var c = locationSummary[DHB_id].casesAtLocation[i];
+                var match = true;
                 if (filterSpec.gender_age) {
-                    if (c.Age == filterSpec.gender_age) cases++;
+                    if (c.Age != filterSpec.gender_age) match = false;
                 } else if (filterSpec.timeline) {
-                    if (moment(c.Date) <= moment(filterSpec.timeline)) cases++;
-                } else {
+                    if (moment(c.Date) > moment(filterSpec.timeline)) {
+                        match = false;
+                    }
+                } 
+                
+                if (match) {
                     cases++;
+                    if (c.Gender == "Male") {
+                        ageSummaryM[c.Age]++;
+                    } else if (c.Gender == "Female") {
+                        ageSummaryF[c.Age]++;
+                    }
                 }
             }
             var radius = Math.floor(cases / 6.2) * 5;
@@ -193,6 +217,12 @@
             }
             locationSummary[DHB_id].marker.setRadius(radius)//.setStyle({color: cmap(cases)});
             locationSummary[DHB_id].markerText.setContent("" + cases);
+        }
+        if (!filterSpec.gender_age) {
+            var graphDiv = $("#gender_age")[0];
+            graphDiv.data[0].y = Object.values(ageSummaryM)
+            graphDiv.data[1].y = Object.values(ageSummaryF)
+            Plotly.redraw(graphDiv);
         }
     }
 
