@@ -263,6 +263,7 @@
             if (c.Gender == "M") c.Gender = "Male";
             genderSummary[c.Gender]++;
             if (c.Age == 64) c.Age = "60s";
+            if (c.Age == "Teen") c.Age = "Teens";
             if (!c.Age) c.Age = "Unknown";
             ageSummary[c.Age]++;
             if (c.Gender == "Female") {
