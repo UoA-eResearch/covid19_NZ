@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
     <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet-providers@1.3.0/leaflet-providers.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js" integrity="sha256-rVeyUZMfAHhQJ7hvWaHrKknTDdqGcn1gxBBJA++E4z8=" crossorigin="anonymous"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.23.0/moment.min.js"></script>
     <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.min.js"></script>
@@ -68,7 +67,7 @@
             background: transparent;
             border:0;
             box-shadow: none;
-            font-size:1em;
+            font-size: 1em;
         }
 
         [data-rz-handle] {
@@ -127,16 +126,16 @@
     }
 
     var regionCounts = L.layerGroup().addTo(map);
+    var DHB_layer = L.layerGroup().addTo(map);
 
     var overlayMaps = {
-        "Region counts": regionCounts
+        "Region counts": regionCounts,
+        "DHB boundaries": DHB_layer
     }
 
     L.control.layers(baseMaps, overlayMaps).addTo(map);
 
     var cmap = chroma.scale([chroma.hsv(0, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(270, 1, 1)]).mode("hsv").domain([10, 1]);
-
-    var locations = {"Auckland":[-36.852095,174.7631803],"Waikato":[-37.77922725,175.20103232],"Nelson":[-41.2710849,173.2836756],"Manawatu":[-40.4832071,175.3832057],"Taupo":[-38.7993662,176.11009674],"Wellington":[-41.2887953,174.7772114],"Hawke’s Bay":[-39.4343279,176.7652742],"Canterbury":[-43.49417615,171.80984476],"Dunedin":[-45.8740984,170.5035755],"Rotorua":[-38.1381493,176.252922],"Northland":[-35.3712702,173.7405337],"Taranaki":[-39.2711067,174.154795],"Invercargill":[-46.4121229,168.3483269],"Hamilton":[-37.7879076,175.2818068],"Coromandel":[-36.7571639,175.5007016],"Bay of Plenty":[-37.84857835,176.60788536],"Wellington Region":[-41.22354735,175.41575755],"Southern DHB":[-45.55613134,170.13322592],"Otago":[-45.1299859,169.5248818],"Wairarapa":[-41.23617985,175.21969019],"Tasman":[-41.1891054,173.0526542],"Marlborough":[-41.47447475,173.83302626],"Upper Hutt":[-41.1240674,175.0699589],"Kapiti Coast":[-40.85657615,175.19396071],"New Plymouth":[-39.0579941,174.0806474],"Waitemata":[-36.8212269,174.66980748],"Christchurch":[-43.530955,172.6366455],"Queenstown":[-45.0321923,168.661],"South Canterbury":[-44.39775519,171.1967057],"Waitaki":[-44.854979,170.7076462],"Wanaka":[-44.6941691,169.1364637],"Blenheim":[-41.5118691,173.9545856],"TBC":[-40.2257029,173.655098]}
 
     var playing = false;
     var playInterval;
@@ -171,11 +170,10 @@
 
     function filter(filterSpec) {
         console.log(filterSpec);
-        for (var i in window.data) {
-            var region = window.data[i];
+        for (var DHB_id in locationSummary) {
             var cases = 0;
-            for (var j in region.data) {
-                var c = region.data[j];
+            for (var i in locationSummary[DHB_id].casesAtLocation) {
+                var c = locationSummary[DHB_id].casesAtLocation[i];
                 if (filterSpec.gender_age) {
                     if (c.Age == filterSpec.gender_age) cases++;
                 } else if (filterSpec.timeline) {
@@ -187,189 +185,206 @@
             var radius = Math.floor(cases / 6.2) * 5;
             if (radius < 10) radius = 10;
             if (cases == 0) {
-                region.marker.removeFrom(map);
-                region.markerText.removeFrom(regionCounts);
+                locationSummary[DHB_id].marker.removeFrom(map);
+                locationSummary[DHB_id].markerText.removeFrom(regionCounts);
             } else {
-                region.marker.addTo(map);
-                region.markerText.addTo(regionCounts);
+                locationSummary[DHB_id].marker.addTo(map);
+                locationSummary[DHB_id].markerText.addTo(regionCounts);
             }
-            region.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
-            region.markerText.setContent("" + cases);
+            locationSummary[DHB_id].marker.setRadius(radius)//.setStyle({color: cmap(cases)});
+            locationSummary[DHB_id].markerText.setContent("" + cases);
         }
     }
 
-    $.getJSON("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/archive/cases.json", function (data) {
-        window.data = data;
-        Papa.parse("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/days.csv", {
+    function handleData(cases, totals) {
+        console.log(cases, totals)
+        locationSummary = {}
+        genderSummary = {
+            "Male": 0,
+            "Female": 0,
+            "Not provided": 0
+        }
+        ageSummary = {
+            "Child": 0,
+            "Teens": 0,
+            "20s": 0,
+            "30s": 0,
+            "40s": 0,
+            "50s": 0,
+            "60s": 0,
+            "70s": 0,
+            "80s": 0,
+            "Unknown": 0
+        }
+        ageSummaryM = $.extend({}, ageSummary);
+        ageSummaryF = $.extend({}, ageSummary)
+        for (var i in cases.data) {
+            var c = cases.data[i];
+            var name = c.DHB;
+            if (!name) continue;
+            var DHB_id = name.replace("South ", "").slice(0,4).toLowerCase();
+            if (!locationSummary[DHB_id]) locationSummary[DHB_id] = {count: 0, name: name, casesAtLocation: []};
+            locationSummary[DHB_id].count++;
+            locationSummary[DHB_id].casesAtLocation.push(c);
+            if (c.Gender == "F") c.Gender = "Female";
+            if (c.Gender == "M") c.Gender = "Male";
+            genderSummary[c.Gender]++;
+            if (c.Age == 64) c.Age = "60s";
+            if (!c.Age) c.Age = "Unknown";
+            ageSummary[c.Age]++;
+            if (c.Gender == "Female") {
+                ageSummaryF[c.Age]++;
+            } else if (c.Gender == "Male") {
+                ageSummaryM[c.Age]++;
+            }
+        }
+        for (var DHB_id in locationSummary) {
+            var cases = locationSummary[DHB_id].count;
+            var name = locationSummary[DHB_id].name;
+            var latlong = window.DHB[DHB_id];
+            if (DHB_id == "auck") latlong = [-36.885660, 174.760724];
+            if (DHB_id == "west") latlong = [-42.718910, 170.964987];
+            if (!latlong) console.error(DHB_id);
+            var radius = Math.floor(cases / 6.2) * 5;
+            if (radius < 10) radius = 10;
+            var color = "pink"; //cmap(cases)
+            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillOpacity:1, name: name }).addTo(map);
+            var text = L.tooltip({
+                permanent: true,
+                direction: 'center',
+                className: 'text'
+            }).setContent("" + cases).setLatLng(latlong).addTo(regionCounts);
+            marker.on('mouseover',function(event) {
+                filter({"name": event.target.options.name})
+            }).on("mouseout", function() {
+                filter({})
+            });
+            locationSummary[DHB_id].marker = marker;
+            locationSummary[DHB_id].markerText = text;
+        }
+
+        var dts = []
+        var confirmed = []
+        var recovered = []
+        var tests = []
+        var hosp = []
+        for (var i in totals.data) {
+            var row = totals.data[i];
+            dts.push(row.Date);
+            confirmed.push(row["Total Confirmed"])
+            recovered.push(row["Total Recovered"])
+            tests.push(row["Total Tests"] / 1000)
+            hosp.push(row["Total In Hospital"])
+        }
+
+
+        var data = [{
+            type: "scatter",
+            mode: "lines",
+            name: "Confirmed cases",
+            x: dts,
+            y: confirmed
+        },{
+            type: "scatter",
+            mode: "lines",
+            name: "Recovered",
+            x: dts,
+            y: recovered
+        },{
+            type: "scatter",
+            mode: "lines",
+            name: "Tests (thousands)",
+            x: dts,
+            y: tests
+        },
+        {
+            type: "scatter",
+            mode: "lines",
+            name: "Hospitalised",
+            x: dts,
+            y: hosp
+        }];
+        var layout = {
+            title: "NZ COVID-19 cases over time",
+            xaxis: {
+                title: "Date"
+            },
+            yaxis: {
+                title: "Cases",
+            },
+            hoverdistance: 100,
+            shapes: [{
+                type: 'line',
+                x0: '2020-02-28',
+                y0: 0,
+                x1: '2020-02-28',
+                yref: 'paper',
+                y1: 1,
+                line: {
+                    color: 'grey',
+                    width: 1.5,
+                    dash: 'dot'
+                }
+            }]
+        };
+        Plotly.newPlot("timeline", data, layout, {responsive: true});
+
+        var data = [{
+            name: "Male",
+            x: Object.keys(ageSummaryM),
+            y: Object.values(ageSummaryM),
+            type: 'bar'
+        },
+        {
+            name: "Female",
+            x: Object.keys(ageSummaryF),
+            y: Object.values(ageSummaryF),
+            type: 'bar'
+        }];
+        var layout = {
+            title: "Gender/Age distribution",
+            barmode: 'stack'
+        }
+        Plotly.newPlot('gender_age', data, layout, {responsive: true});
+
+
+        $(".plot").on('plotly_hover', function(event, data){
+            var id = event.target.id;
+            var d = data.points[0].x || data.points[0].label;
+            filterSpec = {}
+            filterSpec[id] = d
+            filter(filterSpec);
+        });
+
+        $(".plot").on("plotly_unhover", function(event, data) {
+            var id = event.target.id;
+            filter({});
+        });
+    }
+
+    $.getJSON("NZ_DHB2012.geojson", function(DHB) {
+        console.log(DHB);
+        window.DHB = {}
+        L.geoJSON(DHB, {
+            onEachFeature: function(feature, layer) {
+                window.DHB[feature.properties.NAME.replace("South ", "").slice(0,4).toLowerCase()] = layer.getBounds().getCenter();
+                layer.bindTooltip(feature.properties.NAME)
+            }
+        }).addTo(DHB_layer);
+        Papa.parse("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.csv", {
             dynamicTyping: true,
             header: true,
             download: true,
-            complete: function(aggregate_data) {
-                data = window.data;
-                console.log(aggregate_data);
-                casesPerDay = {}
-                genderSummary = {
-                    "Male": 0,
-                    "Female": 0,
-                    "Not provided": 0
-                }
-                ageSummary = {
-                    "Child": 0,
-                    "Teens": 0,
-                    "20s": 0,
-                    "30s": 0,
-                    "40s": 0,
-                    "50s": 0,
-                    "60s": 0,
-                    "70s": 0,
-                    "80s": 0,
-                    "Unknown": 0
-                }
-                ageSummaryM = $.extend({}, ageSummary);
-                ageSummaryF = $.extend({}, ageSummary)
-                for (var i in data) {
-                    var region = data[i];
-                    var name = region.Region;
-                    if (name == 'Waitemata') name = "Auckland";
-                    if (name == "Manawatu-Whanganui") name = "Manawatu";
-                    if (name == "Southland") name = "Southern DHB";
-                    name = name.replace(" Region", "")
-                    region.name = name;
-                    var latlong = locations[name];
-                    if (!latlong) console.error(region);
-                    var cases = 0;
-                    for (var j in region.data) {
-                        cases++;
-                        var c = region.data[j];
-                        if (c.Gender == "F") c.Gender = "Female";
-                        if (c.Gender == "M") c.Gender = "Male";
-                        genderSummary[c.Gender]++;
-                        if (c.Age == 64) c.Age = "60s";
-                        if (!c.Age) c.Age = "Unknown";
-                        ageSummary[c.Age]++;
-                        if (c.Gender == "Female") {
-                            ageSummaryF[c.Age]++;
-                        } else if (c.Gender == "Male") {
-                            ageSummaryM[c.Age]++;
-                        }
-                        if (!casesPerDay[c.Date]) casesPerDay[c.Date] = 0;
-                        casesPerDay[c.Date]++;
+            complete: function (cases) {
+                window.cases = cases;
+                Papa.parse("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/days.csv", {
+                    dynamicTyping: true,
+                    header: true,
+                    download: true,
+                    complete: function(totals) {
+                        window.totals = totals;
+                        handleData(window.cases, window.totals);
                     }
-                    var radius = Math.floor(cases / 6.2) * 5;
-                    if (radius < 10) radius = 10;
-                    var color = "blue"; //cmap(cases)
-                    var marker = L.circleMarker(locations[name], { radius: radius, color: color, name: name }).bindTooltip(name).addTo(map);
-                    var text = L.tooltip({
-                        permanent: true,
-                        direction: 'center',
-                        className: 'text'
-                    }).setContent("" + cases).setLatLng(latlong).addTo(regionCounts);
-                    marker.on('mouseover',function(event) {
-                        filter({"name": event.target.options.name})
-                    }).on("mouseout", function() {
-                        filter({})
-                    });
-                    region.marker = marker;
-                    region.markerText = text;
-                }
-
-                var dts = []
-                var confirmed = []
-                var recovered = []
-                var tests = []
-                var hosp = []
-                for (var i in aggregate_data.data) {
-                    var row = aggregate_data.data[i];
-                    dts.push(row.Date);
-                    confirmed.push(row["Total Confirmed"])
-                    recovered.push(row["Total Recovered"])
-                    tests.push(row["Total Tests"] / 1000)
-                    hosp.push(row["Total In Hospital"])
-                }
-
-
-                var data = [{
-                    type: "scatter",
-                    mode: "lines",
-                    name: "Confirmed cases",
-                    x: dts,
-                    y: confirmed
-                },{
-                    type: "scatter",
-                    mode: "lines",
-                    name: "Recovered",
-                    x: dts,
-                    y: recovered
-                },{
-                    type: "scatter",
-                    mode: "lines",
-                    name: "Tests (thousands)",
-                    x: dts,
-                    y: tests
-                },
-                {
-                    type: "scatter",
-                    mode: "lines",
-                    name: "Hospitalised",
-                    x: dts,
-                    y: hosp
-                }];
-                var layout = {
-                    title: "NZ COVID-19 cases over time",
-                    xaxis: {
-                        title: "Date"
-                    },
-                    yaxis: {
-                        title: "Cases",
-                    },
-                    hoverdistance: 100,
-                    shapes: [{
-                        type: 'line',
-                        x0: '2020-02-28',
-                        y0: 0,
-                        x1: '2020-02-28',
-                        yref: 'paper',
-                        y1: 1,
-                        line: {
-                            color: 'grey',
-                            width: 1.5,
-                            dash: 'dot'
-                        }
-                    }]
-                };
-                Plotly.newPlot("timeline", data, layout, {responsive: true});
-
-                var data = [{
-                    name: "Male",
-                    x: Object.keys(ageSummaryM),
-                    y: Object.values(ageSummaryM),
-                    type: 'bar'
-                },
-                {
-                    name: "Female",
-                    x: Object.keys(ageSummaryF),
-                    y: Object.values(ageSummaryF),
-                    type: 'bar'
-                },
-            ];
-                var layout = {
-                    title: "Gender/Age distribution",
-                    barmode: 'stack'
-                }
-                Plotly.newPlot('gender_age', data, layout, {responsive: true});
-
-
-                $(".plot").on('plotly_hover', function(event, data){
-                    var id = event.target.id;
-                    var d = data.points[0].x || data.points[0].label;
-                    filterSpec = {}
-                    filterSpec[id] = d
-                    filter(filterSpec);
-                });
-
-                $(".plot").on("plotly_unhover", function(event, data) {
-                    var id = event.target.id;
-                    filter({});
                 });
             }
         });
