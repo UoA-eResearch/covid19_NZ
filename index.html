@@ -313,11 +313,12 @@
         var hosp = []
         for (var i in totals.data) {
             var row = totals.data[i];
-            dts.push(row.Date);
-            confirmed.push(row["Total Confirmed"])
-            recovered.push(row["Total Recovered"])
-            tests.push(row["Total Tests"] / 1000)
-            hosp.push(row["Total In Hospital"])
+            console.log(row);
+            if (!row.date) continue;
+            dts.push(row.date);
+            confirmed.push(row["cumulative_total"])
+            recovered.push(row["total_recovered"])
+            hosp.push(row["total_been_in_hospital"])
         }
 
 
@@ -333,12 +334,6 @@
             name: "Recovered",
             x: dts,
             y: recovered
-        },{
-            type: "scatter",
-            mode: "lines",
-            name: "Tests (thousands)",
-            x: dts,
-            y: tests
         },
         {
             type: "scatter",
@@ -347,6 +342,7 @@
             x: dts,
             y: hosp
         }];
+        console.log(data);
         var layout = {
             title: "NZ COVID-19 cases over time",
             xaxis: {
