@@ -364,7 +364,42 @@
                     width: 1.5,
                     dash: 'dot'
                 }
-            }]
+            }],
+            annotations: [
+                {
+                    x: "2020-03-20",
+                    y: 0,
+                    xref: 'x',
+                    yref: 'y',
+                    text: 'Border closed',
+                    showarrow: true,
+                    arrowhead: 7,
+                    ax: 0,
+                    ay: -70,
+                },
+                {
+                    x: "2020-03-23",
+                    y: 0,
+                    xref: 'x',
+                    yref: 'y',
+                    text: 'L3',
+                    showarrow: true,
+                    arrowhead: 7,
+                    ax: 0,
+                    ay: -70,
+                },
+                {
+                    x: "2020-03-25",
+                    y: 0,
+                    xref: 'x',
+                    yref: 'y',
+                    text: 'L4',
+                    showarrow: true,
+                    arrowhead: 7,
+                    ax: 0,
+                    ay: -70,
+                }
+            ]
         };
         Plotly.newPlot("timeline", data, layout, {responsive: true});
 
