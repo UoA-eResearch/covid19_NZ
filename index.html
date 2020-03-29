@@ -179,131 +179,105 @@
 
     function filter(filterSpec) {
         console.log(filterSpec);
-        ageSummary = {
-            "Child": 0,
-            "Teens": 0,
-            "20s": 0,
-            "30s": 0,
-            "40s": 0,
-            "50s": 0,
-            "60s": 0,
-            "70s": 0,
-            "80s": 0,
-            "Unknown": 0
-        }
-        ageSummaryM = $.extend({}, ageSummary);
-        ageSummaryF = $.extend({}, ageSummary);
-        for (var DHB_id in locationSummary) {
+        
+        for (var i in data.dhb) {
             var cases = 0;
-            for (var i in locationSummary[DHB_id].casesAtLocation) {
-                var c = locationSummary[DHB_id].casesAtLocation[i];
-                var match = true;
-                if (filterSpec.gender_age) {
-                    if (c.Age != filterSpec.gender_age) match = false;
-                } else if (filterSpec.timeline) {
-                    if (moment(c.Date) > moment(filterSpec.timeline)) {
-                        match = false;
-                    }
-                } else if (filterSpec.DHB_id) {
-                    if (c.DHB_id != filterSpec.DHB_id) match = false;
-                }
-                
-                if (match) {
-                    cases++;
-                    if (c.Gender == "Male") {
-                        ageSummaryM[c.Age]++;
-                    } else if (c.Gender == "Female") {
-                        ageSummaryF[c.Age]++;
+            var dhb_info = data.dhb[i];
+            if (filterSpec.gender_age) {
+                for (var i in dhb_info.age) {
+                    var age_info = dhb_info.age[i];
+                    if (filterSpec.gender_age == age_info.variable) {
+                        cases = age_info.total;
                     }
                 }
+            } else if (filterSpec.timeline) {
+                for (var i in dhb_info.reported) {
+                    var reported_info = dhb_info.reported[i];
+                    if (filterSpec.timeline >= reported_info.variable.slice(0,10)) {
+                        cases += reported_info.total;
+                    }
+                }
+            } else {
+                cases = dhb_info.total;
             }
             var radius = Math.floor(cases / 6.2) * 5;
             if (radius < 10) radius = 10;
             if (cases == 0) {
-                locationSummary[DHB_id].marker.removeFrom(map);
-                locationSummary[DHB_id].markerText.removeFrom(regionCounts);
+                dhb_info.marker.removeFrom(map);
+                dhb_info.markerText.removeFrom(regionCounts);
             } else {
-                locationSummary[DHB_id].marker.addTo(map);
-                locationSummary[DHB_id].markerText.addTo(regionCounts);
+                dhb_info.marker.addTo(map);
+                dhb_info.markerText.addTo(regionCounts);
             }
-            locationSummary[DHB_id].marker.setRadius(radius)//.setStyle({color: cmap(cases)});
-            locationSummary[DHB_id].markerText.setContent("" + cases);
+            dhb_info.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
+            dhb_info.markerText.setContent("" + cases);
         }
-        if (!filterSpec.gender_age) {
-            var graphDiv = $("#gender_age")[0];
-            graphDiv.data[0].y = Object.values(ageSummaryM)
-            graphDiv.data[1].y = Object.values(ageSummaryF)
-            Plotly.redraw(graphDiv);
+        if (filterSpec.DHB) {
+            for (var i in keys) {
+                ageSummaryM[keys[i]] = 0;
+                ageSummaryF[keys[i]] = 0;
+            }
+            for (var i in cases_by_DHB[filterSpec.DHB]) {
+                var c = cases_by_DHB[filterSpec.DHB][i];
+                if (c.sex == "Female") {
+                    ageSummaryF[c.age]++;
+                } else if (c.sex == "Male") {
+                    ageSummaryM[c.age]++;
+                }
+            }
+        } else {
+            for (var i in data.sex[0].age) {
+                var r = data.sex[0].age[i]
+                ageSummaryF[r.variable] = r.total;
+            }
+            for (var i in data.sex[1].age) {
+                var r = data.sex[1].age[i]
+                ageSummaryM[r.variable] = r.total;
+            }
         }
+        console.log(ageSummaryM, ageSummaryF)
+        var graphDiv = $("#gender_age")[0];
+        graphDiv.data[0].y = Object.values(ageSummaryM)
+        graphDiv.data[1].y = Object.values(ageSummaryF)
+        Plotly.redraw(graphDiv);
     }
 
-    function handleData(cases, totals) {
-        console.log(cases, totals)
-        locationSummary = {}
-        genderSummary = {
-            "Male": 0,
-            "Female": 0,
-            "Not provided": 0
-        }
-        ageSummary = {
-            "Child": 0,
-            "Teens": 0,
-            "20s": 0,
-            "30s": 0,
-            "40s": 0,
-            "50s": 0,
-            "60s": 0,
-            "70s": 0,
-            "80s": 0,
-            "Unknown": 0
-        }
-        ageSummaryM = $.extend({}, ageSummary);
-        ageSummaryF = $.extend({}, ageSummary)
-        for (var i in cases.data) {
-            var c = cases.data[i];
-            var name = c.DHB;
-            if (!name) continue;
-            var DHB_id = name.replace("South ", "").slice(0,4).toLowerCase();
-            c.DHB_id = DHB_id;
-            if (!locationSummary[DHB_id]) locationSummary[DHB_id] = {count: 0, name: name, casesAtLocation: []};
-            locationSummary[DHB_id].count++;
-            locationSummary[DHB_id].casesAtLocation.push(c);
-            if (c.Gender == "F") c.Gender = "Female";
-            if (c.Gender == "M") c.Gender = "Male";
-            genderSummary[c.Gender]++;
-            if (c.Age == 64) c.Age = "60s";
-            if (c.Age == "Teen") c.Age = "Teens";
-            if (!c.Age) c.Age = "Unknown";
-            ageSummary[c.Age]++;
-            if (c.Gender == "Female") {
-                ageSummaryF[c.Age]++;
-            } else if (c.Gender == "Male") {
-                ageSummaryM[c.Age]++;
-            }
-        }
-        for (var DHB_id in locationSummary) {
-            var cases = locationSummary[DHB_id].count;
-            var name = locationSummary[DHB_id].name;
-            var latlong = window.DHB[DHB_id];
-            if (DHB_id == "auck") latlong = [-36.885660, 174.760724];
-            if (DHB_id == "west") latlong = [-42.718910, 170.964987];
-            if (!latlong) console.error(DHB_id);
+    var cases_by_DHB = {};
+
+    function renderPlots(data) {
+        for (var i in data.dhb) {
+            var dhb_info = data.dhb[i];
+            var cases = dhb_info.total;
+            var name = dhb_info.dhb[0].variable;
+            var latlong = window.DHB[name];
+            if (name == "Auckland") latlong = [-36.885660, 174.760724];
+            if (name == "West Coast") latlong = [-42.718910, 170.964987];
+            if (name == "Hutt Valley") latlong = window.DHB.Hutt;
+            if (name == "MidCentral") latlong = window.DHB.Midcentral;
+            if (!latlong) console.error(name);
             var radius = Math.floor(cases / 6.2) * 5;
             if (radius < 10) radius = 10;
             var color = "pink"; //cmap(cases)
-            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillOpacity:1, name: name, DHB_id: DHB_id }).bindTooltip(name).addTo(map);
+            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillOpacity:1, name: name }).bindTooltip(name).addTo(map);
             var text = L.tooltip({
                 permanent: true,
                 direction: 'center',
                 className: 'text'
             }).setContent("" + cases).setLatLng(latlong).addTo(regionCounts);
             marker.on('mouseover',function(event) {
-                filter({"DHB_id": event.target.options.DHB_id})
+                filter({"DHB": event.target.options.name})
             }).on("mouseout", function() {
                 filter({})
             });
-            locationSummary[DHB_id].marker = marker;
-            locationSummary[DHB_id].markerText = text;
+            dhb_info.marker = marker;
+            dhb_info.markerText = text;
+            cases_by_DHB[name] = [];
+            for (var i in data.cases) {
+                var c = data.cases[i];
+                if (c.dhb == name) {
+                    cases_by_DHB[name].push(c);
+                }
+            }
         }
 
         var dts = []
@@ -311,10 +285,8 @@
         var recovered = []
         var tests = []
         var hosp = []
-        for (var i in totals.data) {
-            var row = totals.data[i];
-            console.log(row);
-            if (!row.date) continue;
+        for (var i in data.manual) {
+            var row = data.manual[i];
             dts.push(row.date);
             confirmed.push(row["cumulative_total"])
             recovered.push(row["total_recovered"])
@@ -322,7 +294,7 @@
         }
 
 
-        var data = [{
+        var timeline_data = [{
             type: "scatter",
             mode: "lines",
             name: "Confirmed cases",
@@ -342,7 +314,6 @@
             x: dts,
             y: hosp
         }];
-        console.log(data);
         var layout = {
             title: "NZ COVID-19 cases over time",
             xaxis: {
@@ -401,17 +372,32 @@
                 }
             ]
         };
-        Plotly.newPlot("timeline", data, layout, {responsive: true});
+        Plotly.newPlot("timeline", timeline_data, layout, {responsive: true});
+
+        keys = ["<1", "1 to 4", "5 to 9", "10 to 14", "15 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", "70+"];
+        ageSummaryF = {};
+        for (var i in keys) {
+            ageSummaryF[keys[i]] = 0;
+        }
+        ageSummaryM = $.extend({}, ageSummaryF);
+        for (var i in data.sex[0].age) {
+            var r = data.sex[0].age[i]
+            ageSummaryF[r.variable] = r.total;
+        }
+        for (var i in data.sex[1].age) {
+            var r = data.sex[1].age[i]
+            ageSummaryM[r.variable] = r.total;
+        }
 
         var data = [{
             name: "Male",
-            x: Object.keys(ageSummaryM),
+            x: keys,
             y: Object.values(ageSummaryM),
             type: 'bar'
         },
         {
             name: "Female",
-            x: Object.keys(ageSummaryF),
+            x: keys,
             y: Object.values(ageSummaryF),
             type: 'bar'
         }];
@@ -441,34 +427,20 @@
         window.DHB = {}
         L.geoJSON(DHB, {
             onEachFeature: function(feature, layer) {
-                var DHB_id = feature.properties.NAME.replace("South ", "").slice(0,4).toLowerCase();
-                window.DHB[DHB_id] = layer.getBounds().getCenter();
-                layer.options.DHB_id = DHB_id;
+                window.DHB[feature.properties.NAME] = layer.getBounds().getCenter();
                 layer.bindTooltip(feature.properties.NAME)
                 
                 layer.on('mouseover',function(event) {
-                    filter({"DHB_id": event.target.options.DHB_id})
+                    filter({"DHB": feature.properties.NAME})
                 }).on("mouseout", function() {
                     filter({})
                 });
             }
         }).addTo(DHB_layer);
-        Papa.parse("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.csv", {
-            dynamicTyping: true,
-            header: true,
-            download: true,
-            complete: function (cases) {
-                window.cases = cases;
-                Papa.parse("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/days.csv", {
-                    dynamicTyping: true,
-                    header: true,
-                    download: true,
-                    complete: function(totals) {
-                        window.totals = totals;
-                        handleData(window.cases, window.totals);
-                    }
-                });
-            }
+        $.getJSON("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.json", function(data) {
+            console.log(data);
+            window.data = data;
+            renderPlots(data);
         });
     });
 
