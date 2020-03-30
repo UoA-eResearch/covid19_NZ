@@ -148,6 +148,7 @@
     L.control.layers(baseMaps, overlayMaps).addTo(map);
 
     var cmap = chroma.scale([chroma.hsv(0, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(270, 1, 1)]).mode("hsv").domain([10, 1]);
+    const BUBBLE_SCALE = 2.5;
 
     var playing = false;
     var playInterval;
@@ -211,7 +212,7 @@
             } else {
                 cases = dhb_info.total;
             }
-            var radius = Math.floor(cases / 6.2) * 5;
+            var radius = Math.floor(cases / 6.2) * BUBBLE_SCALE;
             if (radius < 10) radius = 10;
             if (cases == 0) {
                 dhb_info.marker.removeFrom(map);
@@ -276,10 +277,10 @@
             if (name == "Hutt Valley") latlong = window.DHB.Hutt;
             if (name == "MidCentral") latlong = window.DHB.Midcentral;
             if (!latlong) console.error(name);
-            var radius = Math.floor(cases / 6.2) * 5;
+            var radius = Math.floor(cases / 6.2) * BUBBLE_SCALE;
             if (radius < 10) radius = 10;
-            var color = "pink"; //cmap(cases)
-            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillOpacity:1, name: name }).bindTooltip(name).addTo(map);
+            var color = "red"; //cmap(cases)
+            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillColor: "pink", fillOpacity: .5, name: name }).bindTooltip(name).addTo(map);
             var text = L.tooltip({
                 permanent: true,
                 direction: 'center',
