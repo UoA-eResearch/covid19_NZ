@@ -223,12 +223,12 @@
             dhb_info.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
             dhb_info.markerText.setContent("" + cases);
         }
+        var overseas = [0, 0]
         if (filterSpec.DHB) {
             for (var i in keys) {
                 ageSummaryM[keys[i]] = 0;
                 ageSummaryF[keys[i]] = 0;
             }
-            var overseas = [0, 0]
             for (var i in cases_by_DHB[filterSpec.DHB]) {
                 var c = cases_by_DHB[filterSpec.DHB][i];
                 if (c.sex == "Female") {
@@ -251,6 +251,7 @@
                 var r = data.sex[1].age[i]
                 ageSummaryM[r.variable] = r.total;
             }
+            overseas = [data.overseas[0].total, data.overseas[1].total]
         }
         console.log(ageSummaryM, ageSummaryF)
         var graphDiv = $("#gender_age")[0];
