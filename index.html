@@ -228,12 +228,18 @@
                 ageSummaryM[keys[i]] = 0;
                 ageSummaryF[keys[i]] = 0;
             }
+            var overseas = [0, 0]
             for (var i in cases_by_DHB[filterSpec.DHB]) {
                 var c = cases_by_DHB[filterSpec.DHB][i];
                 if (c.sex == "Female") {
                     ageSummaryF[c.age]++;
                 } else if (c.sex == "Male") {
                     ageSummaryM[c.age]++;
+                }
+                if (c.overseas === false) {
+                    overseas[0]++;
+                } else if (c.overseas === true) {
+                    overseas[1]++;
                 }
             }
         } else {
@@ -250,6 +256,9 @@
         var graphDiv = $("#gender_age")[0];
         graphDiv.data[0].y = Object.values(ageSummaryM)
         graphDiv.data[1].y = Object.values(ageSummaryF)
+        Plotly.redraw(graphDiv);
+        var graphDiv = $("#overseas")[0];
+        graphDiv.data[0].values = overseas;
         Plotly.redraw(graphDiv);
     }
 
