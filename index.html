@@ -196,7 +196,7 @@
             } else if (filterSpec.timeline) {
                 for (var i in dhb_info.reported) {
                     var reported_info = dhb_info.reported[i];
-                    if (filterSpec.timeline >= reported_info.variable.slice(0,10)) {
+                    if (new Date(filterSpec.timeline) >= new Date(reported_info.variable.slice(0,10))) {
                         cases += reported_info.total;
                     }
                 }
