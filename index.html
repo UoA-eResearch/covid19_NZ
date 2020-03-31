@@ -20,6 +20,9 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://eknowles.github.io/resizerjs/resizer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/17.2.0/Tween.min.js"></script>
+    <script src="https://jwasilgeo.github.io/Leaflet.Canvas-Flowmap-Layer/src/CanvasFlowmapLayer.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.3/css/flag-icon.min.css" integrity="sha256-NkXMfPcpoih3/xWDcrJcAX78pHpfwxkhNj0bAf8AMTs=" crossorigin="anonymous" />
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-77710107-13"></script>
     <script>
@@ -88,6 +91,12 @@
             width: 6px;
             background-color: rgba(0, 0, 0, 0.5);
         }
+
+        
+        .flag-icon-background {
+            background-color: black;
+            background-size: 20px 15px;
+        }
     </style>
 
 </head>
@@ -112,17 +121,9 @@
     var map = L.map('map', {
         center: [-41.235726,172.5118422],
         zoom: 6,
-        minZoom: 5,
-        maxZoom: 13
+        maxZoom: 13,
+        worldCopyJump: true
     });
-
-    var bounds = map.getBounds();
-    var degreeLimit = 10;
-    bounds._northEast.lat += degreeLimit;
-    bounds._northEast.lng += degreeLimit;
-    bounds._southWest.lat -= degreeLimit;
-    bounds._southWest.lng -= degreeLimit;
-    map.setMaxBounds(bounds);
 
     var baseMaps = {
         "OSM": L.tileLayer.provider("OpenStreetMap.Mapnik"),
@@ -139,10 +140,12 @@
 
     var regionCounts = L.layerGroup().addTo(map);
     var DHB_layer = L.layerGroup().addTo(map);
+    var flow_layer = L.layerGroup().addTo(map);
 
     var overlayMaps = {
         "Region counts": regionCounts,
-        "DHB boundaries": DHB_layer
+        "DHB boundaries": DHB_layer,
+        "Origin countries": flow_layer
     }
 
     L.control.layers(baseMaps, overlayMaps).addTo(map);
@@ -267,20 +270,21 @@
     var cases_by_DHB = {};
 
     function renderPlots(data) {
+        var flowmap_features = []
         for (var i in data.dhb) {
             var dhb_info = data.dhb[i];
             var cases = dhb_info.total;
             var name = dhb_info.dhb[0].variable;
             var latlong = window.DHB[name];
-            if (name == "Auckland") latlong = [-36.885660, 174.760724];
-            if (name == "West Coast") latlong = [-42.718910, 170.964987];
+            if (name == "Auckland") latlong = new L.latLng([-36.885660, 174.760724]);
+            if (name == "West Coast") latlong = new L.latLng([-42.718910, 170.964987]);
             if (name == "Hutt Valley") latlong = window.DHB.Hutt;
             if (name == "MidCentral") latlong = window.DHB.Midcentral;
             if (!latlong) console.error(name);
             var radius = Math.floor(cases / 6.2) * BUBBLE_SCALE;
             if (radius < 10) radius = 10;
             var color = "red"; //cmap(cases)
-            var marker = L.circleMarker(latlong, { radius: radius, color: color, fillColor: "pink", fillOpacity: .5, name: name }).bindTooltip(name).addTo(map);
+            var marker = L.circleMarker(latlong, { radius: radius, color: color, name: name }).bindTooltip(name).addTo(map);
             var text = L.tooltip({
                 permanent: true,
                 direction: 'center',
@@ -294,13 +298,144 @@
             dhb_info.marker = marker;
             dhb_info.markerText = text;
             cases_by_DHB[name] = [];
+            var country_summary = {}
             for (var i in data.cases) {
                 var c = data.cases[i];
                 if (c.dhb == name) {
                     cases_by_DHB[name].push(c);
+                    var country = c["last country before nz"];
+                    if (country == "Scotland") country = "United Kingdom";
+                    if (country == "Northern America") country = "United States";
+                    if (country == "United States of America") country = "United States";
+                    if (country == "Viet Nam") country = "Vietnam";
+                    if (country == "England") country = "United Kingdom";
+                    if (country == "Middle East") country = "Qatar";
+                    if (country) {
+                        if (!country_summary[country]) country_summary[country] = 0;
+                        country_summary[country]++;
+                    }
                 }
             }
+            for (var country in country_summary) {
+                var count = country_summary[country];
+                var country_info = country_lookup[country];
+                if (!country_info) {
+                    console.error(country);
+                    continue;
+                }
+                
+                flowmap_features.push({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [country_info.Latitude, country_info.Longitude]
+                    },
+                    properties: {
+                        origin_name: country,
+                        origin_lat: country_info.Latitude,
+                        origin_lon: country_info.Longitude,
+                        iso_a2: country_info.iso_a2,
+                        destination_name: name,
+                        destination_lat: latlong.lat,
+                        destination_lon: latlong.lng
+                    }
+                })
+
+            }
         }
+
+        
+        var geoJsonFeatureCollection = {
+            type: 'FeatureCollection',
+            features: flowmap_features
+        };
+        console.log(geoJsonFeatureCollection);
+
+        var flowmap = L.canvasFlowmapLayer(geoJsonFeatureCollection, {
+            originAndDestinationFieldIds: {
+                originUniqueIdField: 'origin_name',
+                originGeometry: {
+                    x: 'origin_lon',
+                    y: 'origin_lat'
+                },
+                destinationUniqueIdField: 'destination_name',
+                destinationGeometry: {
+                    x: 'destination_lon',
+                    y: 'destination_lat'
+                }
+            },
+            pathDisplayMode: 'all',
+            animationStarted: true,
+            animationEasingFamily: 'Linear',
+            animationEasingType: 'None',
+            animationDuration: 2000,
+            
+            canvasBezierStyle: {
+                type: 'simple',
+                symbol: {
+                // use canvas styling options (compare to CircleMarker styling below)
+                strokeStyle: 'blue',
+                lineWidth: 0.1,
+                lineCap: 'round',
+                shadowColor: 'blue',
+                shadowBlur: 1.5
+                }
+            },
+
+            animatedCanvasBezierStyle: {
+                type: 'simple',
+                symbol: {
+                // use canvas styling options (compare to CircleMarker styling below)
+                strokeStyle: 'blue',
+                lineWidth: .5,
+                lineDashOffsetSize: 4, // custom property used with animation sprite sizes
+                lineCap: 'round',
+                shadowColor: 'blue',
+                shadowBlur: 2
+                }
+            },
+            style: function (geoJsonFeature) {
+                // use leaflet's path styling options
+
+                // since the GeoJSON feature properties are modified by the layer,
+                // developers can rely on the "isOrigin" property to set different
+                // symbols for origin vs destination CircleMarker stylings
+
+                if (geoJsonFeature.properties.isOrigin) {
+                    return {
+                        radius: 10,
+                        weight: 1,
+                        color: 'blue',
+                        fillColor: 'blue',
+                        fillOpacity: 0.6
+                    };
+                } else {
+                    return {
+                        radius: 5,
+                        weight: 0.25,
+                        color: 'green',
+                        fillColor: 'green',
+                        fillOpacity: 0.7
+                    };
+                }
+            },
+            pointToLayer: function (geoJsonPoint, latlng) {
+                if (geoJsonPoint.properties.iso_a2) {
+                    var iso_a2 = geoJsonPoint.properties.iso_a2.toLowerCase()
+                }
+                var iconSize = [22, 17];
+                if (geoJsonPoint.properties.isOrigin) {
+                    var marker = L.marker(latlng);
+                    marker.bindTooltip(geoJsonPoint.properties.origin_name);
+                    var icon = L.divIcon({
+                        className: "flag-icon-background flag-icon-" + iso_a2,
+                        iconSize: iconSize
+                    });
+                    marker.setIcon(icon);
+                    return marker;
+                }
+            },
+        }).addTo(flow_layer);
 
         var dts = []
         var confirmed = []
@@ -467,12 +602,34 @@
                 }).on("mouseout", function() {
                     filter({})
                 });
+            },
+            style: {
+                color: "black",
+                weight: .5,
+                fillOpacity: 0,
+                opacity: 1
             }
         }).addTo(DHB_layer);
-        $.getJSON("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.json", function(data) {
-            console.log(data);
-            window.data = data;
-            renderPlots(data);
+        Papa.parse("country_centroids_az8.csv", {
+            download: true,
+            header: true,
+            dynamicTyping: true,
+            complete: function(countries) {
+                window.country_lookup = {}
+                console.log(countries);
+                for (var i in countries.data) {
+                    var c = countries.data[i]
+                    if (c.name) {
+                        window.country_lookup[c.name] = c;
+                    }
+                }
+                console.log(window.country_lookup);
+                $.getJSON("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.json", function(data) {
+                    console.log(data);
+                    window.data = data;
+                    renderPlots(data);
+                });
+            }
         });
     });
 
