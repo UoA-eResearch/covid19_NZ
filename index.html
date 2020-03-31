@@ -265,6 +265,21 @@
         var graphDiv = $("#overseas")[0];
         graphDiv.data[0].values = overseas;
         Plotly.redraw(graphDiv);
+        if (filterSpec.DHB) {
+            window.flowmap_layer.selectFeaturesForPathDisplayById("destination_name", filterSpec.DHB, false, "SELECTION_NEW");
+        } else if (filterSpec.timeline) {
+            var countries = {}
+            for (var i in data.cases) {
+                var c = data.cases[i];
+                if (c.country && new Date(filterSpec.timeline) >= new Date(c.reported.slice(0,10))) {
+                    countries[c.country] = true;
+                }
+            }
+            window.flowmap_layer.selectFeaturesForPathDisplay([], "SELECTION_NEW");
+            for (var country in countries) {
+                window.flowmap_layer.selectFeaturesForPathDisplayById("origin_name", country, true, "SELECTION_ADD");
+            }
+        }
     }
 
     var cases_by_DHB = {};
@@ -310,6 +325,7 @@
                     if (country == "Viet Nam") country = "Vietnam";
                     if (country == "England") country = "United Kingdom";
                     if (country == "Middle East") country = "Qatar";
+                    c.country = country;
                     if (country) {
                         if (!country_summary[country]) country_summary[country] = 0;
                         country_summary[country]++;
@@ -352,7 +368,7 @@
         };
         console.log(geoJsonFeatureCollection);
 
-        var flowmap = L.canvasFlowmapLayer(geoJsonFeatureCollection, {
+        window.flowmap_layer = L.canvasFlowmapLayer(geoJsonFeatureCollection, {
             originAndDestinationFieldIds: {
                 originUniqueIdField: 'origin_name',
                 originGeometry: {
