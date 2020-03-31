@@ -335,6 +335,7 @@
                         origin_lat: country_info.Latitude,
                         origin_lon: country_info.Longitude,
                         iso_a2: country_info.iso_a2,
+                        count: count,
                         destination_name: name,
                         destination_lat: latlong.lat,
                         destination_lon: latlong.lng
@@ -426,7 +427,7 @@
                 var iconSize = [22, 17];
                 if (geoJsonPoint.properties.isOrigin) {
                     var marker = L.marker(latlng);
-                    marker.bindTooltip(geoJsonPoint.properties.origin_name);
+                    marker.bindTooltip(geoJsonPoint.properties.origin_name + ": " + geoJsonPoint.properties.count);
                     var icon = L.divIcon({
                         className: "flag-icon-background flag-icon-" + iso_a2,
                         iconSize: iconSize
