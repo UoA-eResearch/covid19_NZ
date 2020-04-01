@@ -342,10 +342,13 @@
                     var airport_latlong = airports.Auckland;
                     if (flight) {
                         airport = window.flight_lookup[flight];
-                        c.airport = airport;
                         if (airport) {
                             airport_latlong = airports[airport]
                             if (!airport_latlong) console.error(airport);
+                            if (airport == "Wellington") airport = "Captial and Coast";
+                            if (airport == "Christchurch") airport = "Canterbury";
+                            if (airport == "Queenstown") airport = "Southern";
+                            c.airport = airport;
                         }
                     }
                     if (country) {
