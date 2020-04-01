@@ -271,8 +271,13 @@
             var countries = {}
             for (var i in data.cases) {
                 var c = data.cases[i];
-                if (c.country && new Date(filterSpec.timeline) >= new Date(c.reported.slice(0,10))) {
-                    countries[c.country] = true;
+                if (new Date(filterSpec.timeline) >= new Date(c.reported.slice(0,10))) {
+                    if (c.country) {
+                        countries[c.country] = true;
+                    }
+                    if (c.airport) {
+                        countries[c.airport] = true;
+                    }
                 }
             }
             window.flowmap_layer.selectFeaturesForPathDisplay([], "SELECTION_NEW");
@@ -284,8 +289,15 @@
 
     var cases_by_DHB = {};
 
+    var airports = {
+        "Auckland": [-36.974611, 174.808045],
+        "Christchurch": [-43.48766, 172.541588],
+        "Queenstown": [-45.021484, 168.741719],
+        "Wellington": [-41.323457, 174.805894]
+    }
+
     function renderPlots(data) {
-        var flowmap_features = []
+        var country_summary = {}
         for (var i in data.dhb) {
             var dhb_info = data.dhb[i];
             var cases = dhb_info.total;
@@ -313,7 +325,6 @@
             dhb_info.marker = marker;
             dhb_info.markerText = text;
             cases_by_DHB[name] = [];
-            var country_summary = {}
             for (var i in data.cases) {
                 var c = data.cases[i];
                 if (c.dhb == name) {
@@ -326,41 +337,69 @@
                     if (country == "England") country = "United Kingdom";
                     if (country == "Middle East") country = "Qatar";
                     c.country = country;
+                    var flight = c["flight no"];
+                    var airport = "Auckland";
+                    var airport_latlong = airports.Auckland;
+                    if (flight) {
+                        airport = window.flight_lookup[flight];
+                        c.airport = airport;
+                        if (airport) {
+                            airport_latlong = airports[airport]
+                            if (!airport_latlong) console.error(airport);
+                        }
+                    }
                     if (country) {
-                        if (!country_summary[country]) country_summary[country] = 0;
-                        country_summary[country]++;
+                        var flow_id = country + "_" + airport;
+                        if (!country_summary[flow_id]) {
+                            var country_info = country_lookup[country];
+                            if (!country_info) {
+                                console.error(country);
+                                continue;
+                            }
+                            country_summary[flow_id] = {
+                                type: 'Feature',
+                                geometry: {
+                                    type: 'Point',
+                                    coordinates: [country_info.Latitude, country_info.Longitude]
+                                },
+                                properties: {
+                                    origin_name: country,
+                                    origin_lat: country_info.Latitude,
+                                    origin_lon: country_info.Longitude,
+                                    iso_a2: country_info.iso_a2,
+                                    count: 0,
+                                    destination_lat: airport_latlong[0],
+                                    destination_lon: airport_latlong[1],
+                                    destination_name: airport
+                                }
+                            }
+                        }
+                        country_summary[flow_id].properties.count++;
+                        flow_id = airport + "_" + name;
+                        if (!country_summary[flow_id]) {
+                            country_summary[flow_id] = {
+                                type: 'Feature',
+                                geometry: {
+                                    type: 'Point',
+                                    coordinates: airport_latlong
+                                },
+                                properties: {
+                                    origin_name: airport,
+                                    origin_lat: airport_latlong[0],
+                                    origin_lon: airport_latlong[1],
+                                    count: 0,
+                                    destination_lat: latlong.lat,
+                                    destination_lon: latlong.lng,
+                                    destination_name: name
+                                }
+                            }
+                        }
+                        country_summary[flow_id].properties.count++;
                     }
                 }
-            }
-            for (var country in country_summary) {
-                var count = country_summary[country];
-                var country_info = country_lookup[country];
-                if (!country_info) {
-                    console.error(country);
-                    continue;
-                }
-                
-                flowmap_features.push({
-                    type: 'Feature',
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [country_info.Latitude, country_info.Longitude]
-                    },
-                    properties: {
-                        origin_name: country,
-                        origin_lat: country_info.Latitude,
-                        origin_lon: country_info.Longitude,
-                        iso_a2: country_info.iso_a2,
-                        count: count,
-                        destination_name: name,
-                        destination_lat: latlong.lat,
-                        destination_lon: latlong.lng
-                    }
-                })
-
             }
         }
-
+        flowmap_features = Object.values(country_summary);
         
         var geoJsonFeatureCollection = {
             type: 'FeatureCollection',
@@ -439,17 +478,17 @@
             pointToLayer: function (geoJsonPoint, latlng) {
                 if (geoJsonPoint.properties.iso_a2) {
                     var iso_a2 = geoJsonPoint.properties.iso_a2.toLowerCase()
-                }
-                var iconSize = [22, 17];
-                if (geoJsonPoint.properties.isOrigin) {
-                    var marker = L.marker(latlng);
-                    marker.bindTooltip(geoJsonPoint.properties.origin_name + ": " + geoJsonPoint.properties.count);
-                    var icon = L.divIcon({
-                        className: "flag-icon-background flag-icon-" + iso_a2,
-                        iconSize: iconSize
-                    });
-                    marker.setIcon(icon);
-                    return marker;
+                    var iconSize = [22, 17];
+                    if (geoJsonPoint.properties.isOrigin) {
+                        var marker = L.marker(latlng);
+                        marker.bindTooltip(geoJsonPoint.properties.origin_name + ": " + geoJsonPoint.properties.count);
+                        var icon = L.divIcon({
+                            className: "flag-icon-background flag-icon-" + iso_a2,
+                            iconSize: iconSize
+                        });
+                        marker.setIcon(icon);
+                        return marker;
+                    }
                 }
             },
         }).addTo(flow_layer);
@@ -627,26 +666,29 @@
                 opacity: 1
             }
         }).addTo(DHB_layer);
-        Papa.parse("country_centroids_az8.csv", {
-            download: true,
-            header: true,
-            dynamicTyping: true,
-            complete: function(countries) {
-                window.country_lookup = {}
-                console.log(countries);
-                for (var i in countries.data) {
-                    var c = countries.data[i]
-                    if (c.name) {
-                        window.country_lookup[c.name] = c;
-                    }
+        Plotly.d3.csv("country_centroids_az8.csv", function (countries) {
+            window.country_lookup = {}
+            console.log(countries);
+            for (var i in countries) {
+                var c = countries[i]
+                if (c.name) {
+                    window.country_lookup[c.name] = c;
                 }
-                console.log(window.country_lookup);
+            }
+            console.log(window.country_lookup);
+            Plotly.d3.csv("flights_to_airports.csv", function (flights) {
+                window.flight_lookup = {}
+                for (var i in flights) {
+                    var f = flights[i];
+                    window.flight_lookup[f.flight] = f.city;
+                }
+                console.log(window.flight_lookup);
                 $.getJSON("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.json", function(data) {
                     console.log(data);
                     window.data = data;
                     renderPlots(data);
                 });
-            }
+            });
         });
     });
 
