@@ -150,7 +150,7 @@
 
     L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-    var cmap = chroma.scale([chroma.hsv(0, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(270, 1, 1)]).mode("hsv").domain([10, 1]);
+    var cmap = chroma.scale([chroma.hsv(0, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(270, 1, 1)]).mode("hsv").domain([50, 1]);
     const BUBBLE_SCALE = 2.5;
 
     var playing = false;
@@ -217,6 +217,7 @@
             }
             var radius = Math.floor(cases / 6.2) * BUBBLE_SCALE;
             if (radius < 10) radius = 10;
+            radius = 10;
             if (cases == 0) {
                 dhb_info.marker.removeFrom(map);
                 dhb_info.markerText.removeFrom(regionCounts);
@@ -224,6 +225,7 @@
                 dhb_info.marker.addTo(map);
                 dhb_info.markerText.addTo(regionCounts);
             }
+            dhb_info.polyLayer.setStyle({fillOpacity: cases / 50});
             dhb_info.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
             dhb_info.markerText.setContent("" + cases);
         }
@@ -302,16 +304,20 @@
             var dhb_info = data.dhb[i];
             var cases = dhb_info.total;
             var name = dhb_info.dhb[0].variable;
+            if (name == "Hutt Valley") name = "Hutt";
+            if (name == "MidCentral") name = "Midcentral";
             var latlong = window.DHB[name];
             if (name == "Auckland") latlong = new L.latLng([-36.885660, 174.760724]);
             if (name == "West Coast") latlong = new L.latLng([-42.718910, 170.964987]);
-            if (name == "Hutt Valley") latlong = window.DHB.Hutt;
-            if (name == "MidCentral") latlong = window.DHB.Midcentral;
+            var dhb_layer = DHB_layers[name];
+            dhb_layer.setStyle({fillOpacity: cases / 50});
+            dhb_info.polyLayer = dhb_layer;
             if (!latlong) console.error(name);
             var radius = Math.floor(cases / 6.2) * BUBBLE_SCALE;
             if (radius < 10) radius = 10;
-            var color = "red"; //cmap(cases)
-            var marker = L.circleMarker(latlong, { radius: radius, color: color, name: name }).bindTooltip(name).addTo(map);
+            radius = 10;
+            var color = "white"; //cmap(cases)
+            var marker = L.circleMarker(latlong, { radius: radius, color: "black", weight: .8, fillColor: color, fillOpacity: 1, name: name }).bindTooltip(name).addTo(map);
             var text = L.tooltip({
                 permanent: true,
                 direction: 'center',
@@ -329,7 +335,7 @@
                 var c = data.cases[i];
                 if (c.dhb == name) {
                     cases_by_DHB[name].push(c);
-                    var country = c["last country before nz"];
+                    var country = c["last country before return"];
                     if (country == "Scotland") country = "United Kingdom";
                     if (country == "Northern America") country = "United States";
                     if (country == "United States of America") country = "United States";
@@ -651,9 +657,11 @@
     $.getJSON("NZ_DHB2012.geojson", function(DHB) {
         console.log(DHB);
         window.DHB = {}
+        window.DHB_layers = {}
         L.geoJSON(DHB, {
             onEachFeature: function(feature, layer) {
                 window.DHB[feature.properties.NAME] = layer.getBounds().getCenter();
+                window.DHB_layers[feature.properties.NAME] = layer;
                 layer.bindTooltip(feature.properties.NAME)
                 
                 layer.on('mouseover',function(event) {
@@ -664,8 +672,8 @@
             },
             style: {
                 color: "black",
+                fillColor: "red",
                 weight: .5,
-                fillOpacity: 0,
                 opacity: 1
             }
         }).addTo(DHB_layer);
@@ -687,7 +695,7 @@
                     window.flight_lookup[f.flight] = f.city;
                 }
                 console.log(window.flight_lookup);
-                $.getJSON("https://raw.githubusercontent.com/nzherald/nz-covid19-data/master/data/cases.json", function(data) {
+                $.getJSON("https://raw.githubusercontent.com/UoA-eResearch/nz-covid19-data/master/data/cases.json", function(data) {
                     console.log(data);
                     window.data = data;
                     renderPlots(data);
