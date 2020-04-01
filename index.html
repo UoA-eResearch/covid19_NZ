@@ -680,6 +680,7 @@
                 window.flight_lookup = {}
                 for (var i in flights) {
                     var f = flights[i];
+                    if (window.flight_lookup[f.flight]) console.warn(f.flight)
                     window.flight_lookup[f.flight] = f.city;
                 }
                 console.log(window.flight_lookup);

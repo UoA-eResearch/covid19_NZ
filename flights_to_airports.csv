@@ -1,4 +1,4 @@
-﻿flight,city
+flight,city
 AA3,Auckland
 AA83,Auckland
 CX2190,Auckland
@@ -24,9 +24,6 @@ JQ295,Auckland
 JQZ217,Auckland
 LA801,Auckland
 MH133,Auckland
-NZ421,Auckland
-NZ8041,Auckland
-NZ1,Auckland
 NZ1,Auckland
 NZ102,Auckland
 NZ112,Auckland
@@ -34,15 +31,14 @@ NZ23,Auckland
 NZ241,Auckland
 NZ283,Auckland
 NZ29,Auckland
-NZ29,Auckland
 NZ407,Auckland
 NZ409,Auckland
 NZ411,Auckland
 NZ413,Auckland
+NZ421,Auckland
 NZ425,Auckland
 NZ429,Auckland
 NZ433,Auckland
-NZ441,Auckland
 NZ441,Auckland
 NZ443,Auckland
 NZ449,Auckland
@@ -72,7 +68,6 @@ NZ627,Auckland
 NZ639,Auckland
 NZ6707,Auckland
 NZ671,Auckland
-NZ675,Auckland
 NZ675,Auckland
 NZ677,Auckland
 NZ7,Auckland
