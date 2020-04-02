@@ -163,6 +163,10 @@
             return new L.DivIcon({ html: '<div><span>' + n + '</span></div>', className: 'marker-cluster' + c, iconSize: new L.Point(40, 40) });
         },
     }).addTo(map);
+
+    map.createPane('behind');
+    map.getPane('behind').style.zIndex = 350;
+
     var DHB_layer = L.layerGroup().addTo(map);
     var flow_layer = L.layerGroup().addTo(map);
 
@@ -344,7 +348,11 @@
             var marker = L.marker(latlong, {
                 name: name,
                 cases: cases
-            }).addTo(markers);
+            }).addTo(markers).on('mouseover',function(event) {
+                filter({"DHB": event.target.options.name})
+            }).on("mouseout", function() {
+                filter({})
+            });
             dhb_info.marker = marker;
             cases_by_DHB[name] = [];
             for (var i in data.cases) {
@@ -456,7 +464,7 @@
                 symbol: {
                 // use canvas styling options (compare to CircleMarker styling below)
                 strokeStyle: 'blue',
-                lineWidth: 0.1,
+                lineWidth: 0.2,
                 lineCap: 'round',
                 shadowColor: 'blue',
                 shadowBlur: 1.5
@@ -675,6 +683,7 @@
         window.DHB = {}
         window.DHB_layers = {}
         L.geoJSON(DHB, {
+            pane: "behind",
             onEachFeature: function(feature, layer) {
                 window.DHB[feature.properties.NAME] = layer.getBounds().getCenter();
                 window.DHB_layers[feature.properties.NAME] = layer;
@@ -690,7 +699,8 @@
                 color: "black",
                 fillColor: "red",
                 weight: .5,
-                opacity: 1
+                opacity: 1,
+                pane: "behind"
             }
         }).addTo(DHB_layer);
         Plotly.d3.csv("country_centroids_az8.csv", function (countries) {
