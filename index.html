@@ -314,6 +314,8 @@
             for (var country in countries) {
                 window.flowmap_layer.selectFeaturesForPathDisplayById("origin_name", country, true, "SELECTION_ADD");
             }
+        } else {
+            window.flowmap_layer.selectFeaturesForPathDisplay(flowmap_features, "SELECTION_NEW");
         }
     }
 
