@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
     <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet-providers@1.3.0/leaflet-providers.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.23.0/moment.min.js"></script>
     <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.min.js"></script>
@@ -138,12 +141,33 @@
         "Wikimedia": L.tileLayer.provider("Wikimedia")
     }
 
-    var regionCounts = L.layerGroup().addTo(map);
+    var markers = L.markerClusterGroup({
+        singleMarkerMode: true,
+        maxClusterRadius: 40,
+        iconCreateFunction: function (cluster) {
+            var markers = cluster.getAllChildMarkers();
+            var n = 0;
+            for (var i = 0; i < markers.length; i++) {
+                n += markers[i].options.cases;
+            }
+
+            var c = ' marker-cluster-';
+            if (n < 10) {
+                c += 'small';
+            } else if (n < 100) {
+                c += 'medium';
+            } else {
+                c += 'large';
+            }
+
+            return new L.DivIcon({ html: '<div><span>' + n + '</span></div>', className: 'marker-cluster' + c, iconSize: new L.Point(40, 40) });
+        },
+    }).addTo(map);
     var DHB_layer = L.layerGroup().addTo(map);
     var flow_layer = L.layerGroup().addTo(map);
 
     var overlayMaps = {
-        "Region counts": regionCounts,
+        "Region counts": markers,
         "DHB boundaries": DHB_layer,
         "Origin countries": flow_layer
     }
@@ -219,16 +243,16 @@
             if (radius < 10) radius = 10;
             radius = 10;
             if (cases == 0) {
-                dhb_info.marker.removeFrom(map);
-                dhb_info.markerText.removeFrom(regionCounts);
+                dhb_info.marker.removeFrom(markers);
             } else {
-                dhb_info.marker.addTo(map);
-                dhb_info.markerText.addTo(regionCounts);
+                dhb_info.marker.addTo(markers);
             }
             dhb_info.polyLayer.setStyle({fillOpacity: cases / 50});
-            dhb_info.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
-            dhb_info.markerText.setContent("" + cases);
+            dhb_info.marker.options.cases = cases;
+            //dhb_info.marker.setRadius(radius)//.setStyle({color: cmap(cases)});
+            //dhb_info.markerText.setContent("" + cases);
         }
+        markers.refreshClusters()
         var overseas = [0, 0]
         if (filterSpec.DHB) {
             for (var i in keys) {
@@ -317,19 +341,11 @@
             if (radius < 10) radius = 10;
             radius = 10;
             var color = "white"; //cmap(cases)
-            var marker = L.circleMarker(latlong, { radius: radius, color: "black", weight: .8, fillColor: color, fillOpacity: 1, name: name }).bindTooltip(name).addTo(map);
-            var text = L.tooltip({
-                permanent: true,
-                direction: 'center',
-                className: 'text'
-            }).setContent("" + cases).setLatLng(latlong).addTo(regionCounts);
-            marker.on('mouseover',function(event) {
-                filter({"DHB": event.target.options.name})
-            }).on("mouseout", function() {
-                filter({})
-            });
+            var marker = L.marker(latlong, {
+                name: name,
+                cases: cases
+            }).addTo(markers);
             dhb_info.marker = marker;
-            dhb_info.markerText = text;
             cases_by_DHB[name] = [];
             for (var i in data.cases) {
                 var c = data.cases[i];
