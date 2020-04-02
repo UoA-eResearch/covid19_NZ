@@ -100,6 +100,10 @@
             background-color: black;
             background-size: 20px 15px;
         }
+
+        .marker-cluster, .marker-cluster div {
+            background-color: rgba(241,241,241,0.6);
+        }
     </style>
 
 </head>
@@ -159,7 +163,7 @@
             } else {
                 c += 'large';
             }
-            c = " marker-cluster-large";
+            c = "";
 
             return new L.DivIcon({ html: '<div><span>' + n + '</span></div>', className: 'marker-cluster' + c, iconSize: new L.Point(40, 40) });
         },
