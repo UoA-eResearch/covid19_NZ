@@ -159,6 +159,7 @@
             } else {
                 c += 'large';
             }
+            c = " marker-cluster-large";
 
             return new L.DivIcon({ html: '<div><span>' + n + '</span></div>', className: 'marker-cluster' + c, iconSize: new L.Point(40, 40) });
         },
