@@ -339,12 +339,13 @@
             var dhb_info = data.dhb[i];
             var cases = dhb_info.total;
             var name = dhb_info.dhb[0].variable;
-            if (name == "Hutt Valley") name = "Hutt";
-            if (name == "MidCentral") name = "Midcentral";
-            var latlong = window.DHB[name];
+            var dhb_name = name;
+            if (name == "Hutt Valley") dhb_name = "Hutt";
+            if (name == "MidCentral") dhb_name = "Midcentral";
+            var latlong = window.DHB[dhb_name];
             if (name == "Auckland") latlong = new L.latLng([-36.885660, 174.760724]);
             if (name == "West Coast") latlong = new L.latLng([-42.718910, 170.964987]);
-            var dhb_layer = DHB_layers[name];
+            var dhb_layer = DHB_layers[dhb_name];
             dhb_layer.setStyle({fillOpacity: cases / 50});
             dhb_info.polyLayer = dhb_layer;
             if (!latlong) console.error(name);
@@ -359,7 +360,7 @@
                 filter({"DHB": event.target.options.name})
             }).on("mouseout", function() {
                 filter({})
-            });
+            }).bindTooltip(name);
             dhb_info.marker = marker;
             cases_by_DHB[name] = [];
             for (var i in data.cases) {
