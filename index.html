@@ -373,8 +373,9 @@
                     if (country == "Viet Nam") country = "Vietnam";
                     if (country == "England") country = "United Kingdom";
                     if (country == "Middle East") country = "Qatar";
+                    if (country == "Hong Kong (Special Administrative Region)") country = "Hong Kong";
                     c.country = country;
-                    var flight = c["flight no"];
+                    var flight = c["flight number"];
                     var airport = "Auckland";
                     var airport_latlong = airports.Auckland;
                     if (flight) {
