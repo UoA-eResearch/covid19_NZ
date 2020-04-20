@@ -286,8 +286,8 @@
                 var r = data.sex[0].age[i]
                 ageSummaryF[r.variable] = r.total;
             }
-            for (var i in data.sex[2].age) {
-                var r = data.sex[2].age[i]
+            for (var i in data.sex[1].age) {
+                var r = data.sex[1].age[i]
                 ageSummaryM[r.variable] = r.total;
             }
             overseas = [data.origin[0].total, data.origin[1].total]
@@ -375,7 +375,7 @@
                     if (country == "England") country = "United Kingdom";
                     if (country == "Middle East") country = "Qatar";
                     if (country == "Hong Kong (Special Administrative Region)") country = "Hong Kong";
-                    if (country == "Polynesia (excludes Hawaii)") country = "Samoa";
+                    if (country == "Polynesia") country = "Samoa";
                     c.country = country;
                     var flight = c["flight number"];
                     var airport = "Auckland";
@@ -650,8 +650,8 @@
             var r = data.sex[0].age[i]
             ageSummaryF[r.variable] = r.total;
         }
-        for (var i in data.sex[2].age) {
-            var r = data.sex[2].age[i]
+        for (var i in data.sex[1].age) {
+            var r = data.sex[1].age[i]
             ageSummaryM[r.variable] = r.total;
         }
 
